@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+
+    {% for note in notes %}
+        <p>
+            {{ note.guid }}: {{ note.title }}<br>
+            {% if note.attributes.reminderTime %}
+                {{ (note.attributes.reminderTime / 1000) | date("Y-m-d H:i:s") }}
+            {% endif %}
+        </p>
+    {% endfor %}
+
+    <hr>
+    {{ dump(notes) }}
+
+{% endblock %}
