@@ -3,6 +3,7 @@
 namespace AppBundle\Controller;
 
 use AppBundle\Entity\Auth;
+use AppBundle\Form\Type\PostActionType;
 use AppBundle\Form\Type\NoteType;
 use EDAM\Error\EDAMNotFoundException;
 use EDAM\NoteStore\NoteFilter;
@@ -123,19 +124,24 @@ class DefaultController extends Controller
     }
 
     /**
-     * @Route("/done/{noteId}/", name="done")
-     *
-     * @param $noteId
+     * @Route("/done/", name="done")
      *
      * @return RedirectResponse
      */
-    public function doneAction($noteId)
+    public function doneAction(Request $request)
     {
         $token = $this->get("session")->get("en_token");
 
         $advancedClient = new AdvancedClient($token, true);
 
         $client = new Client($token, true, $advancedClient);
+
+        $noteId = $request->request->get("id");
+        $csrf = $request->request->get("_token");
+
+        if (false === $this->isCsrfTokenValid($noteId, $csrf)) {
+            throw new \InvalidArgumentException("invalid token");
+        }
 
         $note = $client->getNote($noteId);
         $doneNote = clone $note;

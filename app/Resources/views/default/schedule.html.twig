@@ -15,8 +15,17 @@
                             <div class="chip">{{ tags[tagId].name }}</div>
                         {% endfor %}
 
-                        {{ dump(note) }}
-                        <span><a href="{{ url("done", { "noteId": note.guid }) }}">done</a></span>
+                        {#{{ dump(note) }}#}
+
+                        <span>
+                            <form action="{{ url("done") }}" method="post">
+                                <input type="hidden" name="id" value="{{ note.guid }}"/>
+                                <input type="hidden" name="_token" value="{{ csrf_token(note.guid) }}"/>
+                                <input type="submit" value="done" />
+                            </form>
+                        </span>
+
+                        {#<span><a href="{{ url("done", { "noteId": note.guid }) }}">done</a></span>#}
                     </div>
                 </div>
             </div>

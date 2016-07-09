@@ -4,6 +4,9 @@ parameters:
 #    parameter_name: value
 
 services:
-#    service_name:
-#        class: AppBundle\Directory\ClassName
-#        arguments: ["@another_service_name", "plain_value", "%parameter_name%"]
+    app.tag_giver.command:
+        class: AppBundle\Command\TagGiverCommand
+        arguments:
+            - "@doctrine.orm.default_entity_manager"
+        tags:
+            - { name: console.command }
