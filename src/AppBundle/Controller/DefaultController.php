@@ -7,7 +7,9 @@ use AppBundle\Form\Type\NoteType;
 use EDAM\Error\EDAMNotFoundException;
 use EDAM\NoteStore\NoteFilter;
 use EDAM\NoteStore\NoteList;
+use EDAM\NoteStore\NoteMetadata;
 use EDAM\NoteStore\NotesMetadataResultSpec;
+use EDAM\Types\Tag;
 use Evernote\AdvancedClient;
 use Evernote\Auth\OauthHandler;
 use Evernote\Client;
@@ -22,7 +24,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 class DefaultController extends Controller
 {
     /**
-     * @Route("/{id}", defaults={"id" = 0}, name="homepage")
+     * @Route("/{id}", defaults={"id" = 0}, requirements={"id" = "\d+"}, name="homepage")
      */
     public function indexAction($id = null)
     {
@@ -81,6 +83,7 @@ class DefaultController extends Controller
         $rSpec->includeTitle = true;
         $rSpec->includeAttributes = true;
         $rSpec->includeTitle = true;
+        $rSpec->includeTagGuids = true;
 
         try {
             $noteList = $client->getUserNotestore()->findNotesMetadata($client->getToken(), $nFilter, 0, 50, $rSpec);
@@ -99,9 +102,24 @@ class DefaultController extends Controller
             return $a->attributes->reminderTime > $b->attributes->reminderTime ? 1 : -1;
         });
 
+        $tagsRaw = $client->getUserNotestore()->listTags($client->getToken());
+
+        $tags = [];
+        /** @var Tag $tag */
+        foreach ($tagsRaw as $tag) {
+            $tags[$tag->guid] = $tag;
+        }
+
         $noteType = $this->createForm(NoteType::class);
 
-        return $this->render(":default:schedule.html.twig", ["notes" => $notes, "noteForm" => $noteType->createView()]);
+        return $this->render(
+            ":default:schedule.html.twig",
+            [
+                "notes" => $notes,
+                "tags" => $tags,
+                "noteForm" => $noteType->createView(),
+            ]
+        );
     }
 
     /**
@@ -154,8 +172,53 @@ class DefaultController extends Controller
 
             $client = new Client($token, true, $advancedClient);
 
-
             $client->uploadNote($note);
+        }
+
+        return $this->redirectToRoute("schedule");
+    }
+
+    /**
+     * @Route("/tag", name="tag")
+     *
+     * @return RedirectResponse
+     */
+    public function tagAction()
+    {
+        $token = $this->get("session")->get("en_token");
+
+        $advancedClient = new AdvancedClient($token, true);
+
+        $client = new Client($token, true, $advancedClient);
+
+        $nFilter = new NoteFilter();
+        $nFilter->words = "reminderOrder:* reminderTime:day -reminderDoneTime:*";
+        $nFilter->order = "created";
+        $rSpec = new NotesMetadataResultSpec();
+
+        try {
+            $noteList = $client->getUserNotestore()->findNotesMetadata($client->getToken(), $nFilter, 0, 50, $rSpec);
+        } catch (\Exception $e) {
+            $t = $e;
+        }
+
+        $tagsRaw = $client->getUserNotestore()->listTags($client->getToken());
+        $tags = [];
+        /** @var Tag $tag */
+        foreach ($tagsRaw as $tag) {
+            $tags[$tag->name] = $tag->guid;
+        }
+
+        /** @var NoteList $noteList */
+        $notes = (array) $noteList->notes;
+
+        /** @var NoteMetadata[] $notes */
+        foreach ($notes as $n) {
+            /** @var \EDAM\Types\Note $note */
+            $note = $client->getUserNotestore()->getNote($client->getToken(), $n->guid, true, true, true, true);
+            $note->tagGuids[] = $tags["dzis"];
+
+            $client->getUserNotestore()->updateNote($client->getToken(), $note);
         }
 
         return $this->redirectToRoute("schedule");

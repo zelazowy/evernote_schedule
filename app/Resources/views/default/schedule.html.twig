@@ -11,6 +11,11 @@
                             {{ (note.attributes.reminderTime / 1000) | date("Y-m-d H:i:s") }}
                         {% endif %}
 
+                        {% for tagId in note.tagGuids %}
+                            <div class="chip">{{ tags[tagId].name }}</div>
+                        {% endfor %}
+
+                        {{ dump(note) }}
                         <span><a href="{{ url("done", { "noteId": note.guid }) }}">done</a></span>
                     </div>
                 </div>
